@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ממשק עריכה — אתר רות עשהאל</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --purple: #7464B8; --purple-light: #F0EEFB; --purple-dark: #5a4e9a;
+  --pink: #D4537E; --pink-light: #FCF0F4;
+  --green: #16a34a; --green-light: #dcfce7;
+  --red: #dc2626; --red-light: #fee2e2;
+  --gray: #f4f4f5; --border: #e4e4e7;
+  --text: #18181b; --text-mid: #52525b; --white: #ffffff;
+  --radius: 10px;
+}
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f8fc; color: var(--text); direction: rtl; min-height: 100vh; }
+
+/* LOGIN */
+#login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f0eefb, #fdf0f6); }
+.login-box { background: var(--white); border-radius: 20px; padding: 3rem 2.5rem; box-shadow: 0 8px 40px rgba(116,100,184,0.15); width: 100%; max-width: 420px; text-align: center; }
+.login-logo { font-size: 2.5rem; margin-bottom: 1rem; }
+.login-box h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: .3rem; }
+.login-box p { color: var(--text-mid); font-size: .93rem; margin-bottom: 2rem; }
+.login-field { margin-bottom: 1rem; text-align: right; }
+.login-field label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .4rem; color: var(--text-mid); }
+.login-field input { width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 11px 14px; font-size: .97rem; font-family: inherit; transition: border-color .2s; direction: ltr; }
+.login-field input:focus { outline: none; border-color: var(--purple); }
+.btn-login { width: 100%; padding: 12px; border-radius: var(--radius); border: none; cursor: pointer; font-size: 1rem; font-weight: 700; font-family: inherit; background: var(--purple); color: #fff; transition: .2s; margin-top: .5rem; }
+.btn-login:hover { background: var(--purple-dark); }
+.login-error { color: var(--red); font-size: .88rem; margin-top: .8rem; display: none; padding: 8px 12px; background: var(--red-light); border-radius: 8px; }
+.login-note { font-size: .8rem; color: var(--text-mid); margin-top: 1rem; line-height: 1.5; }
+
+/* APP */
+#app { display: none; }
+header { background: var(--white); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+.header-title { display: flex; align-items: center; gap: .8rem; }
+.header-title h1 { font-size: 1.1rem; font-weight: 700; }
+.header-title p { font-size: .82rem; color: var(--text-mid); }
+.status-badge { padding: 5px 14px; border-radius: 50px; font-size: .83rem; font-weight: 600; background: var(--gray); color: var(--text-mid); transition: .3s; }
+.status-badge.saving { background: #fef9c3; color: #854d0e; }
+.status-badge.saved { background: var(--green-light); color: var(--green); }
+.status-badge.error { background: var(--red-light); color: var(--red); }
+.btn-logout { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 14px; font-size: .85rem; cursor: pointer; font-family: inherit; color: var(--text-mid); transition: .2s; }
+.btn-logout:hover { background: var(--gray); }
+
+.app-layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 65px); }
+aside { background: var(--white); border-left: 1px solid var(--border); padding: 1.5rem 1rem; }
+.nav-section-title { font-size: .75rem; font-weight: 700; color: var(--text-mid); text-transform: uppercase; letter-spacing: .5px; padding: 0 .5rem; margin-bottom: .5rem; }
+.nav-item { display: flex; align-items: center; gap: .7rem; padding: .65rem .8rem; border-radius: var(--radius); cursor: pointer; font-size: .92rem; font-weight: 500; color: var(--text-mid); transition: .15s; border: none; background: none; width: 100%; text-align: right; font-family: inherit; margin-bottom: 2px; }
+.nav-item:hover { background: var(--gray); color: var(--text); }
+.nav-item.active { background: var(--purple-light); color: var(--purple); font-weight: 700; }
+
+main { padding: 2rem 2rem 100px; overflow-y: auto; }
+.section-panel { display: none; }
+.section-panel.active { display: block; }
+.panel-header { margin-bottom: 2rem; }
+.panel-header h2 { font-size: 1.4rem; font-weight: 800; margin-bottom: .3rem; }
+.panel-header p { color: var(--text-mid); font-size: .93rem; }
+
+.fields-grid { display: grid; gap: 1.2rem; }
+.field-group { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); padding: 1.3rem 1.5rem; }
+.field-group-title { font-size: .78rem; font-weight: 700; color: var(--text-mid); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 1rem; padding-bottom: .6rem; border-bottom: 1px solid var(--border); }
+.field { margin-bottom: 1rem; }
+.field:last-child { margin-bottom: 0; }
+.field label { display: block; font-size: .88rem; font-weight: 600; color: var(--text); margin-bottom: .4rem; }
+.field-hint { font-weight: 400; color: var(--text-mid); font-size: .82rem; }
+.field input, .field textarea { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: .95rem; font-family: inherit; color: var(--text); transition: border-color .2s; background: #fafafa; direction: rtl; }
+.field input:focus, .field textarea:focus { outline: none; border-color: var(--purple); background: var(--white); }
+.field textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+.field textarea.tall { min-height: 150px; }
+
+.package-editor { background: var(--gray); border-radius: var(--radius); padding: 1.1rem 1.3rem; margin-bottom: .8rem; }
+.package-editor:last-child { margin-bottom: 0; }
+.package-editor h4 { font-size: .92rem; font-weight: 700; margin-bottom: .8rem; color: var(--text-mid); }
+
+.testimonial-editor { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem; margin-bottom: .8rem; position: relative; }
+.t-header { display: flex; align-items: center; gap: .6rem; margin-bottom: .9rem; }
+.t-num { width: 26px; height: 26px; border-radius: 50%; background: var(--purple-light); color: var(--purple); display: flex; align-items: center; justify-content: center; font-size: .82rem; font-weight: 700; flex-shrink: 0; }
+
+.bot-qa-item { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.3rem; margin-bottom: .8rem; position: relative; }
+.qa-label { font-size: .78rem; font-weight: 700; color: var(--purple); text-transform: uppercase; margin-bottom: .6rem; }
+.add-btn { background: var(--purple-light); color: var(--purple); border: 1.5px dashed var(--purple); border-radius: var(--radius); padding: .8rem; width: 100%; font-size: .93rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: .2s; margin-top: .6rem; }
+.add-btn:hover { background: var(--purple); color: #fff; }
+.remove-btn { position: absolute; top: .8rem; left: .8rem; background: none; border: none; color: #aaa; cursor: pointer; font-size: 1rem; padding: 3px 7px; border-radius: 6px; transition: .2s; }
+.remove-btn:hover { background: var(--red-light); color: var(--red); }
+
+.save-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; background: var(--white); border-top: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+.save-bar p { font-size: .88rem; color: var(--text-mid); }
+.save-bar-btns { display: flex; gap: .8rem; }
+.btn-save { background: var(--purple); color: #fff; border: none; border-radius: var(--radius); padding: 10px 28px; font-size: .97rem; font-weight: 700; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: .5rem; transition: .2s; }
+.btn-save:hover { background: var(--purple-dark); }
+.btn-save:disabled { opacity: .5; cursor: not-allowed; }
+.btn-preview { background: var(--gray); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 18px; font-size: .93rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: .2s; }
+.btn-preview:hover { background: var(--border); }
+
+@media (max-width: 700px) {
+  .app-layout { grid-template-columns: 1fr; }
+  aside { border-left: none; border-bottom: 1px solid var(--border); padding: .8rem; display: flex; flex-wrap: wrap; gap: .3rem; }
+  .nav-section-title { display: none; }
+  .nav-item { width: auto; padding: .5rem .9rem; font-size: .85rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">🥋</div>
+    <h1>ממשק עריכה</h1>
+    <p>אתר רות עשהאל — הגנה עצמית בגובה עיניים</p>
+    <div class="login-field">
+      <label>סיסמה</label>
+      <input type="password" id="pw-input" placeholder="הכנס סיסמה" onkeydown="if(event.key==='Enter')document.getElementById('tk-input').focus()">
+    </div>
+    <div class="login-field">
+      <label>GitHub Token <span class="field-hint">(לא נשמר בשום מקום)</span></label>
+      <input type="password" id="tk-input" placeholder="ghp_..." onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-login" onclick="doLogin()">כניסה</button>
+    <div class="login-error" id="login-error">סיסמה שגויה. נסה שנית.</div>
+    <p class="login-note">הטוקן מוזן בכל כניסה ואינו נשמר בקובץ — כך הוא מאובטח לחלוטין.</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="header-title">
+      <span style="font-size:1.4rem">🥋</span>
+      <div>
+        <h1>ממשק עריכה</h1>
+        <p id="repo-label">ruth-selfdefense</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:1rem">
+      <div class="status-badge" id="status-badge">מוכן לעריכה</div>
+      <button class="btn-logout" onclick="doLogout()">יציאה</button>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <aside>
+      <div class="nav-section-title">עמודים</div>
+      <button class="nav-item active" onclick="showSection('general',this)">🏠 כללי</button>
+      <button class="nav-item" onclick="showSection('women',this)">👩‍💼 סדנאות נשים</button>
+      <button class="nav-item" onclick="showSection('girls',this)">🎓 סדנאות נערות</button>
+      <button class="nav-item" onclick="showSection('testimonials',this)">💬 המלצות</button>
+      <button class="nav-item" onclick="showSection('bot',this)">🤖 בוט שאלות</button>
+      <button class="nav-item" onclick="showSection('whatsapp',this)">📱 וואטסאפ</button>
+    </aside>
+
+    <main>
+
+      <!-- GENERAL -->
+      <div class="section-panel active" id="panel-general">
+        <div class="panel-header"><h2>🏠 כללי — דף הבית</h2><p>כותרות ראשיות ותיאורים</p></div>
+        <div class="fields-grid">
+          <div class="field-group">
+            <div class="field-group-title">Hero — כותרת ראשית</div>
+            <div class="field"><label>שורה 1</label><input id="hero-l1" value="ללמוד להגן"></div>
+            <div class="field"><label>שורה 2</label><input id="hero-l2" value="על עצמך —"></div>
+            <div class="field"><label>שורה 3 <span class="field-hint">(מודגשת בסגול)</span></label><input id="hero-l3" value="מהפנים החוצה"></div>
+            <div class="field"><label>תיאור קצר</label><textarea id="hero-sub">הגנה עצמית שמתחילה מהבטן. כלים מילוליים, תודעתיים ופיזיים שהופכים לאינסטינקט. לאלפי בוגרות שכבר למדו, הביטחון השתנה.</textarea></div>
+          </div>
+          <div class="field-group">
+            <div class="field-group-title">סעיף אודות</div>
+            <div class="field"><label>פסקה ראשונה</label><textarea id="about-p1">אני מלמדת בשיטת "הגנה עצמית בגובה עיניים", שפיתחתי מתוך יותר מ-15 שנות ניסיון בטאקוונדו, אומנויות לחימה ומחקר מקיף. חגורה שחורה דאן 3, חברת נבחרת ישראל לשעבר, ומדליסטית בינלאומית.</textarea></div>
+            <div class="field"><label>פסקה שנייה</label><textarea id="about-p2">השיטה משלבת כלים מילוליים, תודעתיים ומרחביים — לא רק מכות. המטרה היא לעזור לך לזהות מצבים מוקדם ולהגיב נכון, עוד לפני שמגיעים לסכנה פיזית.</textarea></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WOMEN -->
+      <div class="section-panel" id="panel-women">
+        <div class="panel-header"><h2>👩‍💼 סדנאות לנשים</h2><p>תוכן עמוד הסדנאות לנשים וארגונים</p></div>
+        <div class="fields-grid">
+          <div class="field-group">
+            <div class="field-group-title">כותרת ותיאור</div>
+            <div class="field"><label>כותרת</label><input id="w-title" value="סדנת הגנה עצמית לנשים"></div>
+            <div class="field"><label>תיאור</label><textarea id="w-lead">מרחב בטוח שנועד להעניק לך שקט נפשי וביטחון אישי. כלים מציאותיים שנבנו מתוך מחקר — ומוכיחים תוצאות.</textarea></div>
+          </div>
+          <div class="field-group">
+            <div class="field-group-title">מסלולים</div>
+            <div class="package-editor"><h4>מסלול 1</h4>
+              <div class="field"><label>שם</label><input id="w-p1-title" value="סדנת היכרות"></div>
+              <div class="field"><label>מפגשים</label><input id="w-p1-sessions" value="מפגש אחד · שעה וחצי"></div>
+            </div>
+            <div class="package-editor"><h4>מסלול 2</h4>
+              <div class="field"><label>שם</label><input id="w-p2-title" value="מסלול בסיס"></div>
+              <div class="field"><label>מפגשים</label><input id="w-p2-sessions" value="3 מפגשים · שעה וחצי–שעתיים כל אחד"></div>
+            </div>
+            <div class="package-editor"><h4>מסלול 3</h4>
+              <div class="field"><label>שם</label><input id="w-p3-title" value="סדנת עומק תהליכית"></div>
+              <div class="field"><label>מפגשים</label><input id="w-p3-sessions" value="5 מפגשים · תהליך מעמיק"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GIRLS -->
+      <div class="section-panel" id="panel-girls">
+        <div class="panel-header"><h2>🎓 סדנאות לנערות</h2><p>תוכן עמוד הסדנאות לנערות ובתי ספר</p></div>
+        <div class="fields-grid">
+          <div class="field-group">
+            <div class="field-group-title">כותרת ותיאור</div>
+            <div class="field"><label>כותרת</label><input id="g-title" value="סדנת הגנה עצמית לנערות"></div>
+            <div class="field"><label>תיאור</label><textarea id="g-lead">תוכנית מעצימה המותאמת במיוחד לנערות — ספקית מאושרת של משרד החינוך. כלים לחיים שמתחילים בהכרת הכוח שבפנים.</textarea></div>
+          </div>
+          <div class="field-group">
+            <div class="field-group-title">מסלולים ומחירים</div>
+            <div class="package-editor"><h4>מסלול 1</h4>
+              <div class="field"><label>שם</label><input id="g-p1-title" value="סדנת היכרות"></div>
+              <div class="field"><label>מפגשים</label><input id="g-p1-sessions" value="מפגש אחד · שעה וחצי"></div>
+              <div class="field"><label>מחיר</label><input id="g-p1-price" value="1,200₪"></div>
+            </div>
+            <div class="package-editor"><h4>מסלול 2</h4>
+              <div class="field"><label>שם</label><input id="g-p2-title" value="מסלול בסיס"></div>
+              <div class="field"><label>מפגשים</label><input id="g-p2-sessions" value="3 מפגשים · שעה וחצי כל אחד"></div>
+              <div class="field"><label>מחיר</label><input id="g-p2-price" value="3,600₪"></div>
+            </div>
+            <div class="package-editor"><h4>מסלול 3</h4>
+              <div class="field"><label>שם</label><input id="g-p3-title" value="סדנת עומק תהליכית"></div>
+              <div class="field"><label>מפגשים</label><input id="g-p3-sessions" value="5 מפגשים · שעה וחצי כל אחד"></div>
+              <div class="field"><label>מחיר</label><input id="g-p3-price" value="4,500₪"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TESTIMONIALS -->
+      <div class="section-panel" id="panel-testimonials">
+        <div class="panel-header"><h2>💬 המלצות</h2><p>ציטוטים מתלמידות — ניתן להוסיף, לערוך ולמחוק</p></div>
+        <div id="t-container">
+          <div class="testimonial-editor"><button class="remove-btn" onclick="this.closest('.testimonial-editor').remove()">✕</button>
+            <div class="t-header"><div class="t-num">1</div></div>
+            <div class="field"><label>שם</label><input class="t-name" value="אפרת"></div>
+            <div class="field"><label>ציטוט</label><textarea class="t-text">לראשונה בחיי, ובגילי המתקדם, למדתי והתנסיתי איך להגיב כשאני מרגישה מאוימת. היום יש לי הרבה יותר ביטחון ופחות חששות.</textarea></div>
+          </div>
+          <div class="testimonial-editor"><button class="remove-btn" onclick="this.closest('.testimonial-editor').remove()">✕</button>
+            <div class="t-header"><div class="t-num">2</div></div>
+            <div class="field"><label>שם</label><input class="t-name" value="סוזי"></div>
+            <div class="field"><label>ציטוט</label><textarea class="t-text">קיבלתי כלים פרקטיים ותודעתיים שקיימים אצלי עכשיו. הערנות שלי למוגנות ולגבולות שלי גדלה, ויחד איתה היכולת להיות אסרטיבית בצורה נעימה.</textarea></div>
+          </div>
+          <div class="testimonial-editor"><button class="remove-btn" onclick="this.closest('.testimonial-editor').remove()">✕</button>
+            <div class="t-header"><div class="t-num">3</div></div>
+            <div class="field"><label>שם</label><input class="t-name" value="סיגל"></div>
+            <div class="field"><label>ציטוט</label><textarea class="t-text">הסדנה נתנה לי ביטחון ללכת ברחוב בכתפיים רחבות וחיוך. פשוט הבנתי שאני יכולה.</textarea></div>
+          </div>
+          <div class="testimonial-editor"><button class="remove-btn" onclick="this.closest('.testimonial-editor').remove()">✕</button>
+            <div class="t-header"><div class="t-num">4</div></div>
+            <div class="field"><label>שם</label><input class="t-name" value="מיכל"></div>
+            <div class="field"><label>ציטוט</label><textarea class="t-text">אנחנו לומדות להגיד "לא" בצורה חזקה ורצינית. הדבר הזה גורם לכל ה"כן" שלי להיות כל כך אמיתי ונכון.</textarea></div>
+          </div>
+        </div>
+        <button class="add-btn" onclick="addTestimonial()">+ הוסף המלצה</button>
+      </div>
+
+      <!-- BOT -->
+      <div class="section-panel" id="panel-bot">
+        <div class="panel-header"><h2>🤖 בוט שאלות ותשובות</h2><p>הוסף ידע — הבוט ישתמש בו לתשובות טובות יותר</p></div>
+        <div class="field-group" style="margin-bottom:1.2rem">
+          <div class="field-group-title">אופי הבוט</div>
+          <div class="field"><label>הוראות כלליות</label><textarea id="bot-persona" class="tall">את העוזרת הוירטואלית של רות עשהאל, מורה להגנה עצמית. ענה בעברית בלבד, בצורה חמה ועידודית. תשובות קצרות ומועילות — עד 3 משפטים.</textarea></div>
+        </div>
+        <div class="field-group">
+          <div class="field-group-title">מאגר שאלות ותשובות</div>
+          <div id="qa-container"></div>
+          <button class="add-btn" onclick="addQA()">+ הוסף שאלה ותשובה</button>
+        </div>
+      </div>
+
+      <!-- WHATSAPP -->
+      <div class="section-panel" id="panel-whatsapp">
+        <div class="panel-header"><h2>📱 הודעות וואטסאפ</h2><p>ההודעה שנשלחת לרות כשלוחצים על כפתור בכל עמוד</p></div>
+        <div class="fields-grid">
+          <div class="field-group">
+            <div class="field-group-title">מספר טלפון</div>
+            <div class="field"><label>מספר וואטסאפ <span class="field-hint">בפורמט בינלאומי</span></label><input id="wa-phone" value="972545538435" dir="ltr"></div>
+          </div>
+          <div class="field-group">
+            <div class="field-group-title">הודעות לפי עמוד</div>
+            <div class="field"><label>דף הבית</label><input id="wa-gen" value="שלום רות, אני מתעניינת לשמוע עוד 🙂"></div>
+            <div class="field"><label>עמוד סדנאות נשים</label><input id="wa-women" value="שלום רות, אני מתעניינת בסדנה לנשים 🙂"></div>
+            <div class="field"><label>עמוד סדנאות נערות</label><input id="wa-girls" value="שלום רות, אני מתעניינת בסדנה לנערות 🙂"></div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div class="save-bar">
+    <p id="save-info">שמור ופרסם — האתר יתעדכן תוך 30 שניות</p>
+    <div class="save-bar-btns">
+      <button class="btn-preview" id="preview-btn">👁️ צפה באתר</button>
+      <button class="btn-save" id="save-btn" onclick="saveToGitHub()">💾 שמור ופרסם</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GITHUB_REPO = 'itamarkur-png/ruth-selfdefense';
+const GITHUB_FILE = 'index.html';
+const PASSWORD = 'ruth2026';
+let GITHUB_TOKEN = '';
+
+const defaultQA = [
+  { q: 'מה זה הגנה עצמית בגובה עיניים?', a: 'שיטה המשלבת אומנויות לחימה עם כלים מילוליים, תודעתיים ומרחביים. הגנה שמתחילה מהפנים ולא רק פיזית.' },
+  { q: 'כמה עולה סדנה?', a: 'סדנת היכרות לנערות 1,200₪, מסלול בסיס 3,600₪, עומק 4,500₪. לנשים וארגונים — צרי קשר לפרטים.' },
+  { q: 'מתאים גם בלי ניסיון?', a: 'בהחלט! הסדנאות מותאמות לכל רמה וכושר גופני. לא נדרש ניסיון קודם.' },
+  { q: 'מה ההבדל בין חוג לסדנה?', a: 'חוג שנתי הוא תהליך לאורך השנה. סדנה היא מפגשים ממוקדים — 1, 3 או 5. הסדנה מתאימה גם לארגונים.' },
+  { q: 'יש סדנאות לבתי ספר?', a: 'כן! רות ספקית מאושרת של משרד החינוך במערכת גפ"ן מס 55719.' },
+];
+
+function doLogin() {
+  const pw = document.getElementById('pw-input').value;
+  const tk = document.getElementById('tk-input').value.trim();
+  if (pw !== PASSWORD) {
+    document.getElementById('login-error').textContent = 'סיסמה שגויה.';
+    document.getElementById('login-error').style.display = 'block';
+    return;
+  }
+  if (!tk.startsWith('ghp_') && !tk.startsWith('github_pat_')) {
+    document.getElementById('login-error').textContent = 'טוקן לא תקין — חייב להתחיל ב-ghp_';
+    document.getElementById('login-error').style.display = 'block';
+    return;
+  }
+  GITHUB_TOKEN = tk;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  initQA();
+  // Set preview URL dynamically
+  document.getElementById('preview-btn').onclick = () => {
+    window.open(`https://ruth-selfdefense.${GITHUB_REPO.split('/')[0]}.workers.dev`, '_blank');
+  };
+}
+
+function doLogout() {
+  GITHUB_TOKEN = '';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('pw-input').value = '';
+  document.getElementById('tk-input').value = '';
+  document.getElementById('login-error').style.display = 'none';
+}
+
+function showSection(name, btn) {
+  document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+function initQA() {
+  document.getElementById('qa-container').innerHTML = '';
+  defaultQA.forEach(item => addQAItem(item.q, item.a));
+}
+
+function addQAItem(q = '', a = '') {
+  const container = document.getElementById('qa-container');
+  const num = container.children.length + 1;
+  const div = document.createElement('div');
+  div.className = 'bot-qa-item';
+  div.innerHTML = `
+    <button class="remove-btn" onclick="this.closest('.bot-qa-item').remove()">✕</button>
+    <div class="qa-label">שאלה ${num}</div>
+    <div class="field"><label>שאלה</label><input class="qa-q" value="${q.replace(/"/g,'&quot;')}" placeholder="לדוגמה: כמה עולה סדנה?"></div>
+    <div class="field"><label>תשובה</label><textarea class="qa-a" style="min-height:65px">${a}</textarea></div>`;
+  container.appendChild(div);
+}
+
+function addQA() { addQAItem(); }
+
+function addTestimonial() {
+  const c = document.getElementById('t-container');
+  const num = c.children.length + 1;
+  const div = document.createElement('div');
+  div.className = 'testimonial-editor';
+  div.innerHTML = `<button class="remove-btn" onclick="this.closest('.testimonial-editor').remove()">✕</button>
+    <div class="t-header"><div class="t-num">${num}</div></div>
+    <div class="field"><label>שם</label><input class="t-name" value=""></div>
+    <div class="field"><label>ציטוט</label><textarea class="t-text"></textarea></div>`;
+  c.appendChild(div);
+}
+
+function setStatus(text, type) {
+  const b = document.getElementById('status-badge');
+  b.textContent = text;
+  b.className = 'status-badge ' + (type || '');
+}
+
+function collectData() {
+  const qa = [...document.querySelectorAll('.bot-qa-item')].map(el => ({
+    q: el.querySelector('.qa-q')?.value.trim() || '',
+    a: el.querySelector('.qa-a')?.value.trim() || ''
+  })).filter(x => x.q && x.a);
+
+  const testimonials = [...document.querySelectorAll('.testimonial-editor')].map(el => ({
+    name: el.querySelector('.t-name')?.value.trim() || '',
+    text: el.querySelector('.t-text')?.value.trim() || ''
+  })).filter(x => x.name && x.text);
+
+  return {
+    hero: { l1: document.getElementById('hero-l1').value, l2: document.getElementById('hero-l2').value, l3: document.getElementById('hero-l3').value, sub: document.getElementById('hero-sub').value },
+    about: { p1: document.getElementById('about-p1').value, p2: document.getElementById('about-p2').value },
+    women: { title: document.getElementById('w-title').value, lead: document.getElementById('w-lead').value,
+      p1: { title: document.getElementById('w-p1-title').value, sessions: document.getElementById('w-p1-sessions').value },
+      p2: { title: document.getElementById('w-p2-title').value, sessions: document.getElementById('w-p2-sessions').value },
+      p3: { title: document.getElementById('w-p3-title').value, sessions: document.getElementById('w-p3-sessions').value } },
+    girls: { title: document.getElementById('g-title').value, lead: document.getElementById('g-lead').value,
+      p1: { title: document.getElementById('g-p1-title').value, sessions: document.getElementById('g-p1-sessions').value, price: document.getElementById('g-p1-price').value },
+      p2: { title: document.getElementById('g-p2-title').value, sessions: document.getElementById('g-p2-sessions').value, price: document.getElementById('g-p2-price').value },
+      p3: { title: document.getElementById('g-p3-title').value, sessions: document.getElementById('g-p3-sessions').value, price: document.getElementById('g-p3-price').value } },
+    testimonials,
+    bot: { persona: document.getElementById('bot-persona').value, qa },
+    wa: { phone: document.getElementById('wa-phone').value, gen: document.getElementById('wa-gen').value, women: document.getElementById('wa-women').value, girls: document.getElementById('wa-girls').value }
+  };
+}
+
+function applyData(html, d) {
+  // Hero title
+  html = html.replace(/(class="hero-title">)[\s\S]*?(<\/h1>)/,
+    `$1${d.hero.l1}<br>${d.hero.l2}<br><span>${d.hero.l3}</span>$2`);
+  // Hero sub
+  html = html.replace(/(<p class="hero-sub">)[\s\S]*?(<\/p>)/, `$1${d.hero.sub}$2`);
+
+  // WA links by section
+  const enc = s => encodeURIComponent(s);
+  const base = `https://wa.me/${d.wa.phone}`;
+  const waRe = /https:\/\/wa\.me\/\d+(?:\?text=[^"'<\s]*)?/g;
+  const hi = html.indexOf('id="page-home"');
+  const wi = html.indexOf('id="page-women"');
+  const gi = html.indexOf('id="page-girls"');
+  let p0 = html.slice(0, hi).replace(waRe, `${base}?text=${enc(d.wa.gen)}`);
+  let ph = html.slice(hi, wi).replace(waRe, `${base}?text=${enc(d.wa.gen)}`);
+  let pw = html.slice(wi, gi).replace(waRe, `${base}?text=${enc(d.wa.women)}`);
+  let pg = html.slice(gi).replace(waRe, `${base}?text=${enc(d.wa.girls)}`);
+  html = p0 + ph + pw + pg;
+
+  // Girls prices
+  html = html.replace(/(id="page-girls"[\s\S]*?)(1,200₪)/, `$1${d.girls.p1.price}`);
+  html = html.replace(/(id="page-girls"[\s\S]*?)(3,600₪)/, `$1${d.girls.p2.price}`);
+  html = html.replace(/(id="page-girls"[\s\S]*?)(4,500₪)/, `$1${d.girls.p3.price}`);
+
+  // Testimonials grid
+  const newGrid = d.testimonials.map(t =>
+    `<div class="testimonial-card fade-up"><div class="quote">"</div><p>${t.text}</p><div class="testimonial-author"><div class="t-avatar">${t.name[0]}</div><div><strong>${t.name}</strong><span>תלמידה</span></div></div></div>`
+  ).join('\n');
+  html = html.replace(/<div class="testimonials-grid">[\s\S]*?<\/div>(?=\s*<\/div>\s*<\/section>)/,
+    `<div class="testimonials-grid">\n${newGrid}\n</div>`);
+
+  // Bot system prompt
+  const qaText = d.bot.qa.map(x => `ש: ${x.q}\nת: ${x.a}`).join('\n\n');
+  const newPrompt = d.bot.persona + '\n\nמאגר שאלות ותשובות:\n' + qaText + `\n\nלשאלות מחיר/לוז — הפנה לוואטסאפ ${d.wa.phone}`;
+  html = html.replace(/(const SYSTEM_PROMPT = `)[\s\S]*?(`;)/, `$1${newPrompt}$2`);
+
+  return html;
+}
+
+async function saveToGitHub() {
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  setStatus('שומר...', 'saving');
+  document.getElementById('save-info').textContent = 'שולח ל-GitHub...';
+
+  try {
+    // Get current file
+    const getRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`, {
+      headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (!getRes.ok) throw new Error('לא הצלחתי לגשת לקובץ. בדוק שהטוקן תקין.');
+    const fileData = await getRes.json();
+    const currentHTML = decodeURIComponent(escape(atob(fileData.content.replace(/\n/g,''))));
+
+    // Apply changes
+    const data = collectData();
+    const updatedHTML = applyData(currentHTML, data);
+
+    // Push to GitHub
+    const putRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'עדכון תוכן דרך ממשק עריכה', content: btoa(unescape(encodeURIComponent(updatedHTML))), sha: fileData.sha })
+    });
+
+    if (!putRes.ok) {
+      const e = await putRes.json();
+      throw new Error(e.message || 'שגיאה בשמירה');
+    }
+
+    setStatus('✓ פורסם!', 'saved');
+    document.getElementById('save-info').textContent = 'האתר יתעדכן תוך כ-30 שניות ✓';
+    setTimeout(() => { setStatus('מוכן לעריכה', ''); document.getElementById('save-info').textContent = 'שמור ופרסם — האתר יתעדכן תוך 30 שניות'; }, 5000);
+  } catch(e) {
+    setStatus('שגיאה', 'error');
+    document.getElementById('save-info').textContent = 'שגיאה: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
