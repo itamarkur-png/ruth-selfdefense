@@ -879,7 +879,7 @@ async function loadYouTubeVideos() {
   
   try {
     const res = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?key=${YT_API_KEY_PLACEHOLDER}&channelId=${YT_CHANNEL_ID}&part=snippet&order=date&maxResults=3&type=video`
+      `https://ruth-bot-proxy.itamarkur.workers.dev/youtube?channelId=${YT_CHANNEL_ID}`
     );
     const data = await res.json();
     
